@@ -1,0 +1,10 @@
+# Default ignored files
+.env
+ff_stuff/ffprobe.exe
+ff_stuff/ffmpeg.exe
+Scripts/main.py
+
+# Ignored directories
+.idea/
+Scratches2/
+ff_stuff/
