@@ -20,13 +20,6 @@ from selenium.common.exceptions import TimeoutException
 from moviepy.editor import VideoFileClip
 
 # Function to convert a video to an MP3 file
-def convert_video_to_mp3(video_filepath):
-    output_mp3_path = "../tempMP3/"
-    video_clip = VideoFileClip(video_filepath)
-    audio_clip = video_clip.audio
-    mp3_output_filepath = os.path.join(output_mp3_path, os.path.splitext(os.path.basename(video_filepath))[0] + ".mp3")
-    audio_clip.write_audiofile(mp3_output_filepath)
-    return Media("video", mp3_output_filepath, "audio")
 
 def youtube2media(url, requested_language):
     """
