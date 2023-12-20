@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot</title>
+    <!-- Inclure Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 h-screen antialiased leading-none font-sans">
+    <div class="flex flex-col items-center justify-center h-full">
+        <div class="w-full max-w-md">
+            <div class="bg-white shadow-md rounded-lg px-8 py-10">
+                <div class="mb-4">
+                    <h1 class="text-center font-semibold text-2xl">Multi Modal GPT</h1>
+                </div>
+                <div id="chat" class="mb-6 h-64 bg-gray-50 rounded-lg p-4 overflow-auto">
+                    <!-- Les messages du chat apparaîtront ici -->
+                </div>
+                <div class="mb-4 flex">
+                    <textarea id="user_input" class="shadow appearance-none border-t border-b border-l text-grey-darker border-gray-200 bg-white rounded-l w-full py-2 px-3" placeholder="Say something..."></textarea>
+                    <button id="send_button" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-r">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    </button>
+                </div>
+<!--                <div class="mb-8">-->
+<!--                    <textarea id="user_input" class="shadow appearance-none border rounded w-full py-2 px-3 text-grey-darker mb-3" placeholder="Say something..." rows="2"></textarea>-->
+<!--                    <button id="send_button" class="px-3 rounded-r bg-blue-500 hover:bg-blue-700 text-white font-bold p-2 border-blue-500 border-t border-b border-r">-->
+<!--                        &lt;!&ndash; SVG pour l'icône de la flèche &ndash;&gt;-->
+<!--                        <svg class="fill-current w-4 h-4 transform rotate-90" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M10 20a10 10 0 110-20 10 10 0 010 20zm4.285-13.567l-1.271 1.272-2.142-2.142v6.852h-1.744v-6.852l-2.143 2.142-1.27-1.272 4.572-4.572h1.628l4.571 4.572z"/></svg>-->
+<!--                    </button>-->
+<!--                </div>-->
+                <div class="mb-8">
+                    <input type="file" id="file_input" class="shadow appearance-none border rounded w-full py-2 px-3 text-grey-darker mb-3">
+                    <button id="upload_button" class="px-4 py-2 rounded text-white inline-block shadow-lg bg-green-500 hover:bg-green-700">Get transcript</button>
+                    <p id="upload_status" class="text-gray-500 text-xs mt-2"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const chatBox = document.getElementById('chat');
+        const userInput = document.getElementById('user_input');
+        const sendButton = document.getElementById('send_button');
+
+        // Fonction pour ajouter des messages dans la chatbox
+        function appendMessage(side, text) {
+            const messageWrapper = document.createElement('div');
+            const messageBox = document.createElement('div');
+
+            messageWrapper.classList.add('flex', side === 'user' ? 'justify-end' : 'justify-start', 'my-2');
+            messageBox.classList.add('inline-block', 'bg-gray-200', 'rounded-lg', 'px-4', 'py-2', 'text-black', 'max-w-xs', 'm-1');
+
+            messageBox.textContent = text;
+            messageWrapper.appendChild(messageBox);
+            chatBox.appendChild(messageWrapper);
+            chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the bottom
+        }
+
+        // Fonction pour envoyer une question au backend et afficher la réponse
+        function askQuestion(question) {
+            fetch('/ask', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ input: question }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                appendMessage('system', data.response);
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+        }
+
+        // Écouteur d'événements pour le bouton d'envoi
+        sendButton.addEventListener('click', function() {
+            const question = userInput.value.trim();
+            if (question !== '') {
+                appendMessage('user', question);
+                askQuestion(question);
+                userInput.value = ''; // Clear input after sending
+            }
+        });
+
+        // Écouteur d'événements pour la touche Entrée dans le champ de saisie de texte
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendButton.click();
+            }
+        });
+        const uploadButton = document.getElementById('upload_button');
+        const fileInput = document.getElementById('file_input');
+        const uploadStatus = document.getElementById('upload_status');
+
+        // Écouteur d'événements pour le bouton d'envoi de fichier
+        uploadButton.addEventListener('click', function() {
+            const file = fileInput.files[0];
+            if (file) {
+                // Afficher le message d'état
+                uploadStatus.textContent = 'Transcription in progress. This may take some time if your file is large.';
+
+                // Créer un objet FormData pour envoyer le fichier
+                const formData = new FormData();
+                formData.append('file', file);
+
+                fetch('/upload', { // Remplacez '/upload' par l'URL de votre endpoint côté serveur
+                    method: 'POST',
+                    body: formData, // Aucun en-tête de type de contenu requis, car FormData est une forme spéciale de données
+                })
+                .then(response => response.json())
+                .then(data => {
+                    appendMessage('system', data.response);
+                    uploadStatus.textContent = ''; // Effacer le message ou afficher un résultat
+
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                    uploadStatus.textContent = 'An error occurred. Please try again.';
+
+                });
+            }
+        });
+    });
+    </script>
+</body>
+</html>
