@@ -4,7 +4,8 @@ python-dotenv
 openai
 pytube
 selenium
-youtube_transcript_api
+youtube-transcript-api
 spotipy
 requests
 moviepy
+openai-whisper
