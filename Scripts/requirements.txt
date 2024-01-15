@@ -1,0 +1,10 @@
+flask
+werkzeug
+python-dotenv
+openai
+pytube
+selenium
+youtube_transcript_api
+spotipy
+requests
+moviepy
