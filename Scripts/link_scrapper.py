@@ -57,7 +57,9 @@ def youtube2media(url, requested_language):
     # List available transcripts for the video
     try:
         transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-        print('----- some transcripts available -------')
+        print('----- some transcripts available -------\n', transcript_list )
+        print('and translations :', [available_trsl['language_code'] for transcript in transcript_list for available_trsl in
+              transcript.translation_languages])
         # Check if a transcript is available in the requested language
         transcript_in_language = [transcript for transcript in transcript_list if
                                   transcript.language_code == requested_language]
@@ -176,9 +178,9 @@ class SpotifyWebAutomation:
         return
 
 if __name__ == '__main__':
-    #print(youtube2media('https://www.youtube.com/watch?v=MMpRlEiR6IM', 'fr'))
-    video_test_path = '../videos/video1.mp4'
-    print(convert_video_to_mp3(video_test_path).contenu_actuel)
+    print(youtube2media('https://www.youtube.com/watch?v=-lXvFrHxIK8', 'fr'))
+    # video_test_path = '../videos/video1.mp4'
+    # print(convert_video_to_mp3(video_test_path).contenu_actuel)
     # from dotenv import load_dotenv
     #
     # load_dotenv()

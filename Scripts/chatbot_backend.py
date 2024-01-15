@@ -20,7 +20,7 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 load_dotenv()
 openai.api_key = os.environ.get('OPENAI_KEY')
 app.secret_key = os.environ.get('APP_SECRET_KEY')
-
+default_input_language = os.environ.get('DEFAULT_INPUT_LANGUAGE')
 
 
 @app.route('/')
@@ -91,16 +91,28 @@ def upload_file():
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
-        if get_file_extension(filename) == 'mp4':
-            audio_media = convert_video_to_mp3(filepath)
-        else:
-            audio_media = Media('audio', filepath, 'audio')
+        # if get_file_extension(filename) == 'mp4':
+        #     audio_media = convert_video_to_mp3(filepath)
+        # else:
+        audio_media = Media('audio', filepath, 'audio')
         print(audio_media.contenu_actuel)
-        text_media = transcript(audio_media.contenu_actuel)
+        text_media = transcript(mp3_filepath=audio_media.contenu_actuel)
         add_history(f"User : {text_media.contenu_actuel}")
         return jsonify({'response': text_media.contenu_actuel}), 200
     else:
         return jsonify({'response': 'File type not allowed'}), 400
 
+# @app.route('/set_language', methods=['POST'])
+# def set_language():
+#     global default_input_language
+#     data = request.get_json()
+#     language = data.get('language', default_input_language)
+#     default_input_language = language
+#     # Vous pouvez choisir de retourner la nouvelle valeur de la langue par défaut au client
+#     return jsonify({'default_input_language': default_input_language})
+
 if __name__ == '__main__':
     app.run(debug=True)
+    languages_dict = {'English': 'en', 'French': 'fr', 'Spanish': 'es', 'German': 'de', 'Italian': 'it', 'Portuguese': 'pt'}
+    languages_list = list(languages_dict.keys())
+

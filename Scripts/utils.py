@@ -4,11 +4,10 @@ import whisper
 from media_class import Media
 from moviepy.editor import VideoFileClip
 
-def transcript(mp3_filepath, input_language='fr', transcripter_model_ref='base'):
+def transcript(mp3_filepath, transcripter_model_ref='base'):
     model = whisper.load_model(transcripter_model_ref, download_root="../model/")
     response = model.transcribe(
         audio=mp3_filepath,
-        language=input_language,  # Adjust the language code as needed
         fp16=False
     )
     return Media("audio", response['text'], 'raw_text')

@@ -3,6 +3,7 @@
 Scripts/ffprobe.exe
 Scripts/ffmpeg.exe
 Scripts/main.py
+model/base.pt
 
 # Ignored directories
 .idea/

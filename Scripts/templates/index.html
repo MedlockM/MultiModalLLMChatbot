@@ -32,101 +32,141 @@
 <!--                </div>-->
                 <div class="mb-8">
                     <input type="file" id="file_input" class="shadow appearance-none border rounded w-full py-2 px-3 text-grey-darker mb-3">
-                    <button id="upload_button" class="px-4 py-2 rounded text-white inline-block shadow-lg bg-green-500 hover:bg-green-700">Get transcript</button>
+                    <button id="upload_button" class="px-4 py-2 rounded text-white inline-block shadow-lg bg-green-500 hover:bg-green-700">Get transcript in the chat</button>
                     <p id="upload_status" class="text-gray-500 text-xs mt-2"></p>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const chatBox = document.getElementById('chat');
-        const userInput = document.getElementById('user_input');
-        const sendButton = document.getElementById('send_button');
+</body>
+</html>
 
-        // Fonction pour ajouter des messages dans la chatbox
-        function appendMessage(side, text) {
-            const messageWrapper = document.createElement('div');
-            const messageBox = document.createElement('div');
 
-            messageWrapper.classList.add('flex', side === 'user' ? 'justify-end' : 'justify-start', 'my-2');
-            messageBox.classList.add('inline-block', 'bg-gray-200', 'rounded-lg', 'px-4', 'py-2', 'text-black', 'max-w-xs', 'm-1');
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chatBox = document.getElementById('chat');
+    const userInput = document.getElementById('user_input');
+    const sendButton = document.getElementById('send_button');
 
-            messageBox.textContent = text;
-            messageWrapper.appendChild(messageBox);
-            chatBox.appendChild(messageWrapper);
-            chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the bottom
+    // Fonction pour ajouter des messages dans la chatbox
+    function appendMessage(side, text) {
+        const messageWrapper = document.createElement('div');
+        const messageBox = document.createElement('div');
+
+        messageWrapper.classList.add('flex', side === 'user' ? 'justify-end' : 'justify-start', 'my-2');
+        messageBox.classList.add('inline-block', 'bg-gray-200', 'rounded-lg', 'px-4', 'py-2', 'text-black', 'max-w-xs', 'm-1');
+
+        messageBox.textContent = text;
+        messageWrapper.appendChild(messageBox);
+        chatBox.appendChild(messageWrapper);
+        chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the bottom
+    }
+
+    // Fonction pour envoyer une question au backend et afficher la réponse
+    function askQuestion(question) {
+        fetch('/ask', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ input: question }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            appendMessage('system', data.response);
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+    }
+
+    // Écouteur d'événements pour le bouton d'envoi
+    sendButton.addEventListener('click', function() {
+        const question = userInput.value.trim();
+        if (question !== '') {
+            appendMessage('user', question);
+            askQuestion(question);
+            userInput.value = ''; // Clear input after sending
         }
+    });
 
-        // Fonction pour envoyer une question au backend et afficher la réponse
-        function askQuestion(question) {
-            fetch('/ask', {
+    // Écouteur d'événements pour la touche Entrée dans le champ de saisie de texte
+    userInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendButton.click();
+        }
+    });
+
+
+<!--    // Ajout de cette fonction pour remplir la liste déroulante au chargement de la page-->
+<!--    const languages_dict = {'English': 'en', 'French': 'fr', 'Spanish': 'es', 'German': 'de', 'Italian': 'it', 'Portuguese': 'pt'};-->
+<!--    const languageListElement = document.getElementById('language-list');-->
+
+<!--    for (const [language_string, language_ref] of Object.entries(languages_dict)) {-->
+<!--        console.log(language_string, language_ref)-->
+<!--        const option = document.createElement('option');-->
+<!--        option.value = language_ref;-->
+<!--        option.text = language_string;-->
+<!--        languageListElement.appendChild(option);-->
+<!--    }-->
+
+
+<!--    // Cette fonction est appelée chaque fois que la valeur de la liste déroulante change-->
+<!--    languageListElement.addEventListener('change', function () {-->
+<!--        const selectedLanguage = languageListElement.value;-->
+<!--        console.log('Language selected:', selectedLanguage); // Log pour déboger-->
+
+<!--        // Appel AJAX pour envoyer le choix de langue au back-end-->
+<!--        fetch('/set_language', {-->
+<!--            method: 'POST',-->
+<!--            headers: {-->
+<!--                'Content-Type': 'application/json',-->
+<!--            },-->
+<!--            body: JSON.stringify({language: selectedLanguage})-->
+<!--        })-->
+<!--        .then(response => response.json())-->
+<!--        .then(data => {-->
+<!--            console.log(data);-->
+<!--        })-->
+<!--        .catch((error) => {-->
+<!--            console.error('Error:', error);-->
+<!--        });-->
+<!--    });-->
+
+
+    // Écouteur d'événements pour le bouton d'envoi de fichier
+    const uploadButton = document.getElementById('upload_button');
+    const fileInput = document.getElementById('file_input');
+    const uploadStatus = document.getElementById('upload_status');
+
+    uploadButton.addEventListener('click', function() {
+        const file = fileInput.files[0];
+        if (file) {
+            // Afficher le message d'état
+            uploadStatus.textContent = 'Transcription in progress. This may take some time if your file is large.';
+
+            // Créer un objet FormData pour envoyer le fichier
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/upload', { // Remplacez '/upload' par l'URL de votre endpoint côté serveur
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ input: question }),
+                body: formData, // Aucun en-tête de type de contenu requis, car FormData est une forme spéciale de données
             })
             .then(response => response.json())
             .then(data => {
                 appendMessage('system', data.response);
+                uploadStatus.textContent = ''; // Effacer le message ou afficher un résultat
+
             })
             .catch((error) => {
                 console.error('Error:', error);
+                uploadStatus.textContent = 'An error occurred. Please try again.';
+
             });
         }
-
-        // Écouteur d'événements pour le bouton d'envoi
-        sendButton.addEventListener('click', function() {
-            const question = userInput.value.trim();
-            if (question !== '') {
-                appendMessage('user', question);
-                askQuestion(question);
-                userInput.value = ''; // Clear input after sending
-            }
-        });
-
-        // Écouteur d'événements pour la touche Entrée dans le champ de saisie de texte
-        userInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendButton.click();
-            }
-        });
-        const uploadButton = document.getElementById('upload_button');
-        const fileInput = document.getElementById('file_input');
-        const uploadStatus = document.getElementById('upload_status');
-
-        // Écouteur d'événements pour le bouton d'envoi de fichier
-        uploadButton.addEventListener('click', function() {
-            const file = fileInput.files[0];
-            if (file) {
-                // Afficher le message d'état
-                uploadStatus.textContent = 'Transcription in progress. This may take some time if your file is large.';
-
-                // Créer un objet FormData pour envoyer le fichier
-                const formData = new FormData();
-                formData.append('file', file);
-
-                fetch('/upload', { // Remplacez '/upload' par l'URL de votre endpoint côté serveur
-                    method: 'POST',
-                    body: formData, // Aucun en-tête de type de contenu requis, car FormData est une forme spéciale de données
-                })
-                .then(response => response.json())
-                .then(data => {
-                    appendMessage('system', data.response);
-                    uploadStatus.textContent = ''; // Effacer le message ou afficher un résultat
-
-                })
-                .catch((error) => {
-                    console.error('Error:', error);
-                    uploadStatus.textContent = 'An error occurred. Please try again.';
-
-                });
-            }
-        });
     });
+});
     </script>
-</body>
-</html>
