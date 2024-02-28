@@ -2,10 +2,11 @@ import os
 from youtube_transcript_api import YouTubeTranscriptApi
 from pytube import YouTube
 from media_class import Media
-from youtube_transcript_api._errors import TranscriptsDisabled
+import re
 import os
 from pytube import YouTube
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api._errors import TranscriptsDisabled
 import spotipy
 import requests
 import urllib.parse
@@ -57,33 +58,33 @@ def youtube2media(url, requested_language):
     # List available transcripts for the video
     try:
         transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-        print('----- some transcripts available -------\n', transcript_list )
-        print('and translations :', [available_trsl['language_code'] for transcript in transcript_list for available_trsl in
-              transcript.translation_languages])
+        #print('----- some transcripts available -------\n', transcript_list )
+        #print('and translations :', [available_trsl['language_code'] for transcript in transcript_list for available_trsl in
+        #      transcript.translation_languages])
         # Check if a transcript is available in the requested language
         transcript_in_language = [transcript for transcript in transcript_list if
                                   transcript.language_code == requested_language]
         if len(transcript_in_language) > 0:
-            print('------- transcript available in requested language -------')
+            #print('------- transcript available in requested language -------')
             transcript = transcript_in_language[0].fetch()
             transcript_text_formatted = concatenate_text_from_dicts(transcript)
-            print(transcript_text_formatted)
+            #print(transcript_text_formatted)
             return Media('video', transcript_text_formatted, 'raw_text')
 
         # Check if a translation is available in the requested language
-        print([available_trsl['language_code'] for transcript in transcript_list for available_trsl in
-              transcript.translation_languages])
+        # print([available_trsl['language_code'] for transcript in transcript_list for available_trsl in
+        #       transcript.translation_languages])
         if requested_language in [available_trsl['language_code'] for transcript in transcript_list for available_trsl in
                                   transcript.translation_languages]:
-            print('----- no transcript available in requested language but translation available ------')
+            #print('----- no transcript available in requested language but translation available ------')
             transcript_list_filtered = [transcript for transcript in transcript_list if requested_language in
                                         [trsl['language_code'] for trsl in transcript.translation_languages]]
             transcript = transcript_list_filtered[0]
-            print(transcript.is_translatable)
+            #print(transcript.is_translatable)
             translated_transcript = transcript.translate(requested_language).fetch()
-            print(translated_transcript)
+            #print(translated_transcript)
             trsl_transcript_text_formatted = concatenate_text_from_dicts(translated_transcript)
-            print(trsl_transcript_text_formatted)
+            #print(trsl_transcript_text_formatted)
             return Media('video', trsl_transcript_text_formatted, 'raw_text')
         else:
             print('no transcript neither translation available in requested language, translating with language model...')
@@ -108,7 +109,7 @@ def youtube2media(url, requested_language):
 
 class CustomWebElement:
 
-    def __init__(self, web_attribute_type, web_attribute_value, action_type, action_value):
+    def __init__(self, web_attribute_type, web_attribute_value, action_type=None, action_value=None):
         self.web_attribute_type = web_attribute_type
         self.web_attribute_value = web_attribute_value
         self.action_type = action_type
@@ -121,14 +122,12 @@ class CustomWebElement:
         elif self.action_type == 'fill':
             web_element.send_keys(self.action_value)
 
-class SpotifyWebAutomation:
+class Scrapper:
 
-    def __init__(self, url, client_id, client_secret):
+    def __init__(self, url):
         self.driver = webdriver.Chrome()
         self.url = url
         self.driver.get(url)
-        self.client_id = client_id
-        self.client_secret = client_secret
 
     def find_element_by_attribute_value(self, custom_element):
         # Initialize a WebDriver (in this case, using Chrome)
@@ -139,11 +138,53 @@ class SpotifyWebAutomation:
 
         return elements
 
-    def find_transcript(self):
+    def find_episode_podcast_title(self):
+        if "podcasts.apple" in self.url:
+            title_custom_element = CustomWebElement('class', 'product-header__title')
+            title_element = self.find_element_by_attribute_value(title_custom_element)
+            title_string = title_element.text
+            return title_string
+        else:
+            raise Exception('unknown url')
+
+    def find_rms_file(self):
+        if "podcasts.apple" in self.url:
+            # Utiliser une expression régulière pour trouver le pattern 'id' suivi de chiffres
+            match = re.search(r"id(\d+)", self.url)
+            if match:
+                # Retourner le groupe de chiffres trouvé juste après 'id'
+                id = match.group(1)
+            else:
+                # Retourner None si aucun pattern correspondant n'a été trouvé
+                raise Exception("ID not found in url")
+
+            # Effectuer la requête GET
+            apple_lookup_api_url = "https://itunes.apple.com/lookup?id=" + str(id)
+            response = requests.get(apple_lookup_api_url)
+
+            # Vérifier si la requête a réussi (code de statut 200)
+            if response.status_code == 200:
+                # Analyser le contenu JSON de la réponse
+                data = response.json()
+
+                # Vérifier s'il y a au moins un résultat
+                if data['resultCount'] > 0:
+                    # Récupérer le premier résultat et extraire le 'feedUrl'
+                    feed_url = data['results'][0]['feedUrl']
+                    return feed_url
+                else:
+                    raise Exception("Aucun feed URL trouvé")
+            else:
+                raise Exception("Échec de la requête, code de statut: {}".format(response.status_code))
+        else:
+            raise Exception('unknown url')
+
+
+    def spotify_find_transcript(self, client_id, client_secret):
 
         element1 = CustomWebElement('data-testid', 'login-button', 'click', '1')
-        element2 = CustomWebElement('id', 'login-username', 'fill', self.client_id)
-        element3 = CustomWebElement('id', 'login-password', 'fill', self.client_secret)
+        element2 = CustomWebElement('id', 'login-username', 'fill', client_id)
+        element3 = CustomWebElement('id', 'login-password', 'fill', client_secret)
         element4 = CustomWebElement('class', 'Type__TypeElement-sc-goli3j-0 cOJqPq sc-jSUZER sc-gKPRtg hJfyeq hgatVV', 'click', '1')
         element5 = CustomWebElement('id', 'onetrust-reject-all-handler', 'click', '1')
         element6 = CustomWebElement('class', 'Link-sc-1g2blu2-0 VkYMJ QiHXpFb4dLZNOFe5gpp3', 'click', '1')
@@ -174,11 +215,11 @@ class SpotifyWebAutomation:
         return Media('audio', result_string, 'raw_text')
 
     def download_as_mp3(self):
-        # TODO: from a spotify url to a mp3 filename
+        # TODO: from a url to a mp3 filename
         return
 
 if __name__ == '__main__':
-    print(youtube2media('https://www.youtube.com/watch?v=-lXvFrHxIK8', 'fr'))
+    #print(youtube2media('https://www.youtube.com/watch?v=-lXvFrHxIK8', 'fr'))
     # video_test_path = '../videos/video1.mp4'
     # print(convert_video_to_mp3(video_test_path).contenu_actuel)
     # from dotenv import load_dotenv
@@ -188,5 +229,9 @@ if __name__ == '__main__':
     # client_secret = os.environ.get('SPOTIFY_CLIENT_SECRET')
     # url = "https://open.spotify.com/episode/6pmbVygCb3EA7orGr5rwkC?si=xqpsZ_2rTAKTUs3Y1GcvUA&nd=1"
     #
-    # spot = SpotifyWebAutomation(url, client_id, client_secret)
-    # print(spot.find_transcript().contenu_actuel)
+    apple_podcast_episode_url = "https://podcasts.apple.com/fr/podcast/131-au-del%C3%A0-de-lintelligence-humaine-james-bridle/id1361158683?i=1000645821640"
+    scrapper = Scrapper(apple_podcast_episode_url)
+    #print(scrapper.find_episode_podcast_title())
+
+    print(scrapper.find_rms_file())
+    # print(spot.find_transcript(client_id, client_secret).contenu_actuel)
